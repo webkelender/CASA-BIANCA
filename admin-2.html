@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Casa Bianca — Admin Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0D1117; --card: #161B22; --card2: #1C2128; --border: rgba(255,255,255,0.08);
+    --text: #E6EDF3; --muted: #8B949E; --amber: #E8A850;
+    --blue: #5B9BD5; --orange: #E87040; --green: #4CAF7D; --red: #D94040;
+  }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
+  header {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 12px 16px; position: sticky; top: 0; z-index: 100;
+    overflow: hidden; /* CRITICAL — never let header overflow the page */
+  }
+  .header-row1 {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .header-row2 {
+    display: flex; align-items: center; gap: 8px;
+    overflow-x: auto; /* scroll INSIDE header only */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .header-row2::-webkit-scrollbar { display: none; }
+  .logo { display: flex; align-items: center; gap: 8px; }
+  .logo-icon { font-size: 20px; }
+  .logo-sub { font-size: 9px; letter-spacing: .2em; color: var(--amber); text-transform: uppercase; }
+  .logo-title { font-size: 15px; font-weight: 700; }
+  .live-badge {
+    display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+    background: rgba(76,175,125,.12); border: 1px solid rgba(76,175,125,.3);
+    color: var(--green); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600;
+  }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .header-pill {
+    flex-shrink: 0; white-space: nowrap;
+    border-radius: 8px; padding: 5px 11px; font-size: 11px; font-weight: 600;
+    font-family: inherit; border: 1px solid var(--border);
+    background: rgba(255,255,255,.05); color: var(--muted);
+  }
+  .nav-link {
+    flex-shrink: 0; white-space: nowrap;
+    font-size: 11px; color: var(--muted); text-decoration: none;
+    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 11px; transition: color .2s;
+  }
+  .nav-link:hover { color: var(--text); }
+  .clear-btn {
+    flex-shrink: 0; white-space: nowrap;
+    background: rgba(217,64,64,.1); border: 1px solid rgba(217,64,64,.3);
+    color: var(--red); border-radius: 8px; padding: 5px 11px;
+    cursor: pointer; font-size: 11px; font-family: inherit;
+    transition: background .2s; display: none;
+  }
+  .clear-btn:hover { background: rgba(217,64,64,.2); }
+  .last-update { flex-shrink: 0; font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+  /* STATS BAR */
+  .stats-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 16px 24px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; cursor: pointer; transition: all .2s; text-decoration: none; color: inherit;
+  }
+  .stat-card:hover, .stat-card.active { border-color: var(--stat-color,var(--amber)); background: color-mix(in srgb, var(--stat-color,var(--amber)) 8%, var(--card)); }
+  .stat-num { font-size: 26px; font-weight: 800; color: var(--stat-color, var(--text)); margin-bottom: 2px; }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+
+  /* FILTERS */
+  .filters { display: flex; gap: 8px; padding: 0 24px 14px; flex-wrap: wrap; }
+  .filter-pill {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 20px; padding: 5px 14px; cursor: pointer; font-size: 11px; font-weight: 600;
+    font-family: inherit; transition: all .2s;
+  }
+  .filter-pill.active { background: rgba(232,168,80,.12); border-color: rgba(232,168,80,.4); color: var(--amber); }
+  .filter-pill:hover:not(.active) { color: var(--text); border-color: rgba(255,255,255,.2); }
+
+  /* ORDERS */
+  .orders-wrap { padding: 0 24px 32px; }
+  .order-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: 10px; overflow: hidden; border-left-width: 3px;
+    animation: fadeIn .3s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+  .order-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 14px 16px 10px;
+  }
+  .order-table { font-size: 18px; font-weight: 800; color: var(--text); }
+  .order-id { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .order-right { text-align: right; }
+  .status-badge {
+    display: inline-block; border-radius: 12px; padding: 3px 10px;
+    font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .order-time { font-size: 10px; color: var(--muted); }
+  .order-items { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
+  .item-chip {
+    background: rgba(255,255,255,.05); border-radius: 6px;
+    padding: 4px 9px; font-size: 11px; color: #ccc;
+  }
+  .order-note {
+    margin: 0 16px 10px; background: rgba(232,112,64,.1); border: 1px solid rgba(232,112,64,.25);
+    border-radius: 7px; padding: 7px 10px; font-size: 11px; color: #E87040;
+  }
+  .order-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px 14px; border-top: 1px solid var(--border);
+  }
+  .order-total { color: var(--amber); font-weight: 800; font-size: 15px; }
+  .status-info-pill {
+    border-radius: 8px; padding: 6px 12px;
+    font-size: 11px; font-weight: 600;
+  }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 44px; margin-bottom: 14px; }
+  .empty-title { font-size: 15px; margin-bottom: 6px; }
+  .empty-sub { font-size: 12px; }
+
+  /* SOUND PING for new order */
+  .new-order-alert {
+    position: fixed; top: 80px; right: 24px; z-index: 200;
+    background: var(--blue); color: #fff; border-radius: 12px; padding: 12px 18px;
+    font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.4); animation: slideLeft .3s ease;
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  .new-order-alert.show { opacity: 1; pointer-events: auto; }
+  @keyframes slideLeft { from{transform:translateX(60px)} to{transform:none} }
+
+  @media(max-width:600px) {
+    .stats-bar { grid-template-columns: repeat(3,1fr); }
+    .orders-wrap, .stats-bar, .filters { padding-left: 12px; padding-right: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <!-- Row 1: Logo + Live badge -->
+  <div class="header-row1">
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      <div>
+        <div class="logo-sub">Casa Bianca</div>
+        <div class="logo-title">Admin Dashboard</div>
+      </div>
+    </div>
+    <div class="live-badge"><div class="live-dot"></div> Live</div>
+  </div>
+  <!-- Row 2: Scrollable action pills (scroll inside header, NOT the page) -->
+  <div class="header-row2">
+    <span class="header-pill">👁 View Only</span>
+    <span class="last-update" id="lastUpdate">Checking…</span>
+    <button class="clear-btn" id="clearBtn" onclick="clearServed()">🗑 Clear Served</button>
+    <a href="menu.html" class="nav-link">🛒 Menu</a>
+    <a href="chef.html" class="nav-link">👨‍🍳 Chef</a>
+  </div>
+</header>
+
+<div class="stats-bar" id="statsBar"></div>
+<div class="filters" id="filters"></div>
+<div class="orders-wrap" id="ordersWrap"></div>
+
+<div class="new-order-alert" id="newAlert">🔔 New order received!</div>
+
+<script>
+const fmt = n=>`₹${Number(n).toLocaleString("en-IN")}`;
+const timeAgo = ts=>{ const s=Math.floor((Date.now()-ts)/1000); if(s<60)return s+"s ago"; if(s<3600)return Math.floor(s/60)+"m ago"; return Math.floor(s/3600)+"h ago"; };
+const elapsedMin = ts=>Math.floor((Date.now()-ts)/60000);
+
+const STATUS_META = {
+  received:  { label:"New Order",  color:"#5B9BD5", bg:"rgba(91,155,213,.12)", icon:"🔵", note:"Waiting for chef" },
+  preparing: { label:"Preparing",  color:"#E87040", bg:"rgba(232,112,64,.12)", icon:"🟠", note:"Chef is cooking" },
+  ready:     { label:"Ready",      color:"#4CAF7D", bg:"rgba(76,175,125,.12)", icon:"🟢", note:"Ready to serve" },
+  served:    { label:"Served",     color:"#8B949E", bg:"rgba(139,148,158,.1)", icon:"⚪", note:"Completed" },
+};
+
+let currentFilter = "all";
+let prevOrderCount = 0;
+let lastDataHash = "";
+
+function getOrders() { return JSON.parse(localStorage.getItem("cb_orders")||"[]"); }
+function saveOrders(o) { localStorage.setItem("cb_orders", JSON.stringify(o)); }
+
+function clearServed() {
+  saveOrders(getOrders().filter(o=>o.status!=="served")); render(true);
+}
+
+function buildStats(orders) {
+  const counts = {all:orders.length,received:0,preparing:0,ready:0,served:0};
+  orders.forEach(o=>{ if(counts[o.status]!==undefined) counts[o.status]++; });
+  const colors = {all:"#E8A850",received:"#5B9BD5",preparing:"#E87040",ready:"#4CAF7D",served:"#8B949E"};
+  const labels = {all:"All Orders",received:"New",preparing:"Preparing",ready:"Ready",served:"Served"};
+  const bar = document.getElementById("statsBar");
+
+  // Update existing cards instead of rebuilding
+  const keys = Object.keys(counts);
+  const existing = bar.querySelectorAll(".stat-card");
+  if (existing.length === keys.length) {
+    keys.forEach((key, i) => {
+      existing[i].className = "stat-card"+(currentFilter===key?" active":"");
+      existing[i].querySelector(".stat-num").textContent = counts[key];
+    });
+  } else {
+    bar.innerHTML = "";
+    keys.forEach(key=>{
+      const d = document.createElement("div");
+      d.className = "stat-card"+(currentFilter===key?" active":"");
+      d.style.setProperty("--stat-color", colors[key]);
+      d.innerHTML = `<div class="stat-num">${counts[key]}</div><div class="stat-label">${labels[key]}</div>`;
+      d.onclick = ()=>{ currentFilter=key; render(true); };
+      bar.appendChild(d);
+    });
+  }
+  document.getElementById("clearBtn").style.display = counts.served>0?"block":"none";
+}
+
+function buildFilters(orders) {
+  const counts = {all:orders.length,received:0,preparing:0,ready:0,served:0};
+  orders.forEach(o=>{ if(counts[o.status]!==undefined) counts[o.status]++; });
+  const LABELS = {all:"All",received:"🔵 New",preparing:"🟠 Preparing",ready:"🟢 Ready",served:"⚪ Served"};
+  const wrap = document.getElementById("filters");
+
+  // Update button text only, don't rebuild
+  const keys = Object.keys(LABELS);
+  const existing = wrap.querySelectorAll(".filter-pill");
+  if (existing.length === keys.length) {
+    keys.forEach((f,i) => {
+      existing[i].className = "filter-pill"+(currentFilter===f?" active":"");
+      existing[i].textContent = LABELS[f]+" ("+counts[f]+")";
+    });
+  } else {
+    wrap.innerHTML = "";
+    keys.forEach(f=>{
+      const b = document.createElement("button");
+      b.className = "filter-pill"+(currentFilter===f?" active":"");
+      b.textContent = LABELS[f]+" ("+counts[f]+")";
+      b.onclick = ()=>{ currentFilter=f; render(true); };
+      wrap.appendChild(b);
+    });
+  }
+}
+
+function orderCardHTML(order) {
+  const sm = STATUS_META[order.status];
+  const elapsed = elapsedMin(order.timestamp);
+  return `
+    <div class="order-top">
+      <div>
+        <div class="order-table">Table ${order.table}</div>
+        <div class="order-id">#${order.id} · ${timeAgo(order.timestamp)}</div>
+      </div>
+      <div class="order-right">
+        <div class="status-badge" style="background:${sm.bg};color:${sm.color};border:1px solid ${sm.color}40">${sm.label}</div>
+        <div class="order-time">${elapsed}m waiting</div>
+      </div>
+    </div>
+    <div class="order-items">${order.items.map(it=>`<span class="item-chip">${it.name} ×${it.qty}</span>`).join("")}</div>
+    ${order.note?`<div class="order-note">📝 ${order.note}</div>`:""}
+    <div class="order-footer">
+      <div class="order-total">${fmt(order.total)}</div>
+      <div class="status-info-pill" style="background:${sm.bg};border:1px solid ${sm.color}30;color:${sm.color}">
+        ${sm.icon} ${sm.note}
+      </div>
+    </div>`;
+}
+
+function buildOrders(orders, force) {
+  const filtered = currentFilter==="all" ? orders : orders.filter(o=>o.status===currentFilter);
+  const wrap = document.getElementById("ordersWrap");
+
+  if (filtered.length===0) {
+    const msg = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">${currentFilter==="all"?"No orders yet":"No "+currentFilter+" orders"}</div><div class="empty-sub">${currentFilter==="all"?"Orders placed from the <a href='menu.html' style='color:#E8A850'>menu page</a> will appear here instantly.":"Switch filter to see other orders."}</div></div>`;
+    if (wrap.innerHTML !== msg) wrap.innerHTML = msg;
+    return;
+  }
+
+  const existingIds = new Set([...wrap.querySelectorAll(".order-card")].map(c=>c.dataset.id));
+  const newIds = new Set(filtered.map(o=>o.id));
+
+  // Remove cards that are no longer in filtered list
+  existingIds.forEach(id => {
+    if (!newIds.has(id)) {
+      const el = wrap.querySelector(`[data-id="${id}"]`);
+      if (el) el.remove();
+    }
+  });
+
+  filtered.forEach((order, idx) => {
+    const sm = STATUS_META[order.status];
+    const existing = wrap.querySelector(`[data-id="${order.id}"]`);
+
+    if (existing) {
+      // Only update the parts that can change: status badge, elapsed time, status pill
+      const badge = existing.querySelector(".status-badge");
+      const timeEl = existing.querySelector(".order-time");
+      const pill = existing.querySelector(".status-info-pill");
+      const idEl = existing.querySelector(".order-id");
+
+      if (badge) { badge.textContent = sm.label; badge.style.background = sm.bg; badge.style.color = sm.color; badge.style.border = `1px solid ${sm.color}40`; }
+      if (timeEl) timeEl.textContent = elapsedMin(order.timestamp)+"m waiting";
+      if (pill) { pill.textContent = sm.icon+" "+sm.note; pill.style.background = sm.bg; pill.style.color = sm.color; }
+      if (idEl) idEl.textContent = `#${order.id} · ${timeAgo(order.timestamp)}`;
+      existing.style.borderLeftColor = sm.color;
+    } else {
+      // New card — insert at correct position
+      const card = document.createElement("div");
+      card.className = "order-card";
+      card.dataset.id = order.id;
+      card.style.borderLeftColor = sm.color;
+      card.innerHTML = orderCardHTML(order);
+
+      // Insert at correct index
+      const cards = wrap.querySelectorAll(".order-card");
+      if (idx < cards.length) {
+        wrap.insertBefore(card, cards[idx]);
+      } else {
+        wrap.appendChild(card);
+      }
+    }
+  });
+}
+
+function render(force) {
+  const orders = getOrders();
+
+  // Skip full re-render if nothing changed (only update timestamps)
+  const hash = JSON.stringify(orders.map(o=>({id:o.id,status:o.status,filter:currentFilter})));
+  const dataChanged = hash !== lastDataHash;
+  lastDataHash = hash;
+
+  buildStats(orders);
+  buildFilters(orders);
+  buildOrders(orders, force || dataChanged);
+  document.getElementById("lastUpdate").textContent = "Updated " + new Date().toLocaleTimeString();
+
+  if (orders.length > prevOrderCount && prevOrderCount > 0) showAlert();
+  prevOrderCount = orders.length;
+}
+
+function showAlert() {
+  const a = document.getElementById("newAlert");
+  a.classList.add("show");
+  setTimeout(()=>a.classList.remove("show"), 3000);
+}
+
+// Poll every 3 seconds
+render();
+setInterval(render, 3000);
+
+// Also listen to storage events from same origin
+window.addEventListener("storage", e=>{ if(e.key==="cb_orders") render(); });
+
+// Prevent horizontal swipe (browser back/forward navigation)
+let touchStartX = 0;
+let touchStartY = 0;
+document.addEventListener("touchstart", e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener("touchmove", e => {
+  const dx = Math.abs(e.touches[0].clientX - touchStartX);
+  const dy = Math.abs(e.touches[0].clientY - touchStartY);
+  // If swipe is more horizontal than vertical, block it
+  if (dx > dy && dx > 10) {
+    e.preventDefault();
+  }
+}, { passive: false });
+</script>
+</body>
+</html>
